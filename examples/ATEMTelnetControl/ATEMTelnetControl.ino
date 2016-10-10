@@ -11,9 +11,9 @@
  */
 
 /*
-	IMPORTANT: If you want to use this library in your own projects and/or products,
- 	please play a fair game and heed the license rules! See our web page for a Q&A so
- 	you can keep a clear conscience: http://skaarhoj.com/about/licenses/
+  IMPORTANT: If you want to use this library in your own projects and/or products,
+  please play a fair game and heed the license rules! See our web page for a Q&A so
+  you can keep a clear conscience: http://skaarhoj.com/about/licenses/
  */
 
 
@@ -25,10 +25,10 @@
 // The MAC address is printed on a label on the shield or on the back of your device
 // The IP address should be an available address you choose on your subnet where the switcher is also present
 byte mac[] = {
-  0x90, 0xA2, 0xDA, 0x0D, 0x6B, 0xB9
+  0x90, 0xA2, 0xDA, 0x0F, 0x48, 0x8A
 };      // <= SETUP!  MAC address of the Arduino
-IPAddress clientIp(192, 168, 10, 99);        // <= SETUP!  IP address of the Arduino
-IPAddress switcherIp(192, 168, 10, 240);     // <= SETUP!  IP address of the ATEM Switcher
+IPAddress clientIp(10, 10, 28, 13);        // <= SETUP!  IP address of the Arduino
+IPAddress switcherIp(10, 10, 28, 17);     // <= SETUP!  IP address of the ATEM Switcher
 
 // Include ATEMbase library and make an instance:
 // The port number is chosen randomly among high numbers.
@@ -59,7 +59,7 @@ void handleTelnetIncoming()  {
     TCPServer._currentClient << F("List of commands:\n")
                              << F("- help : This message\n")
                              << F("- pgm : Get ME1 Program source\n")
-                             << F("- macro : set macro\n") // github example not actually working
+                             << F("- macro= : Start a macro\n")
                              << F("- pgm=<num> : Set ME1 Program source\n")
                              << F("- prv : Get ME1 Preview source\n")
                              << F("- prv=<num> : Set ME1 Preview source\n")
@@ -118,6 +118,20 @@ void handleTelnetIncoming()  {
                              << F("\r\n");
   }
 
+  /* ADDED MACRO FUNCTIONALITY
+  ============================================*/
+
+  if (TCPServer.isNextPartOfBuffer_P(PSTR("macro=")))  {  // if "macro" is the first part of the command string entered...
+    commandOK = true;
+    uint16_t input = TCPServer.parseInt();  // This returns the integer value of the next part of the buffer and advances the buffer pointer.
+    AtemSwitcher.setMacroAction(input, 0);
+    AtemSwitcher.runLoop(50);
+    // Printing the value in any case:
+    TCPServer._currentClient << F("Ran Macro: ")
+                             << input
+                             << F("\r\n");
+  }
+
   if (TCPServer.isNextPartOfBuffer_P(PSTR("aux")))  {  // if "aux" is the first part of the command string entered...
     uint8_t auxChannel = TCPServer.parseInt();
     if (auxChannel>0 && auxChannel<=AtemSwitcher.getTopologyAUXbusses())  {
@@ -145,10 +159,8 @@ void handleTelnetIncoming()  {
   if (!commandOK) {  // NACK + hint is returned if we didn't recognize command
     TCPServer._server << F("NACK (type \"help\" for commands)\r\n");
   }
+
 }
-
-
-
 
 
 void setup() {
@@ -178,5 +190,3 @@ void loop() {
   AtemSwitcher.runLoop();
   TCPServer.runLoop();
 }
-
-
